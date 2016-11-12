@@ -1,0 +1,3 @@
+
+class TelegramBotException(Exception):
+    pass
