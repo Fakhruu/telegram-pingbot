@@ -9,7 +9,7 @@ CREATE TABLE "websites" (
 CREATE TABLE "users" (
 	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`telegram_id`	INTEGER UNIQUE,
-	`telegram_name`	BLOB,
+	`telegram_name`	TEXT,
 	`web_id`	INTEGER,
 	`insert_time`	INTEGER
 );
@@ -26,7 +26,7 @@ CREATE TABLE "commands" (
 	`insert_time`	INTEGER
 );
 CREATE TABLE `admin` (
-	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,
+	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`name`	TEXT,
 	`telegram_id`	INTEGER
 );
