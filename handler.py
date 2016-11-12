@@ -6,7 +6,6 @@ datafakap = ()
 def start(bot, update):
     update.message.reply_text('Hello World!')
 
-<<<<<<< HEAD
 def menu(bot, update):
     global datafakap
     datafakap=(bot, update)
@@ -16,7 +15,6 @@ def menu(bot, update):
                 InlineKeyboardButton("Credits", callback_data='/credit')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text('Please choose:', reply_markup=reply_markup)
->>>>>>> 4bfdb9c5e0077b64261a8432e6bf05b0363883b5
 
 def add(bot, update):
     update.message.reply_text('Add Website Function Goes Here')
