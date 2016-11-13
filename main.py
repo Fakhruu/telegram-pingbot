@@ -4,7 +4,7 @@ from telebot import types
 import logger
 import config
 def main():
-    tokenKey = config.ConfigSectionMap('CONFIG')['token2']
+    tokenKey = config.ConfigSectionMap('CONFIG')['token']
     # loop throuagh each handler in handler.py
 
 
@@ -13,7 +13,7 @@ def main():
     @bot.message_handler(commands=['start'])
     def send_welcome(message):
         bot.reply_to(message, "Hello! Welcome to PingBot!")
-        markup = types.ReplyKeyboardMarkup(row_width=2)
+        markup = types.ReplyKeyboardMarkup(row_width=2,one_time_keyboard=True)
         add = types.KeyboardButton('Add Website')
         edit = types.KeyboardButton('Edit Website')
         delete = types.KeyboardButton('Delete Website')
@@ -33,9 +33,18 @@ def main():
         elif message.text == 'Credits':
             credit(message)
 
+    @bot.message_handler(func=lambda message: True, content_types=['text'])
+    def command_default(m):
+    bot.send_message(m.chat.id, "I don't understand \"" + m.text)
+
     def addweb(message):
         chat_id = message.chat.id
-        bot.send_message(chat_id,'Add!')
+        bot.send_message(chat_id,'Please insert your website domain below: ')
+        bot.register_next_step_handler(message, weburl)
+
+    def weburl(message):
+        url = message.text
+        bot.send_message(message.chat.id, "Your URL: " + url)
 
     def editweb(message):
         chat_id = message.chat.id
