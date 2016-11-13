@@ -3,10 +3,14 @@ import config
 import os
 import json
 import time
-import exception  # custom exception
+from exception import TelegramBotException  # custom exception
 
 
 class SQL:
+
+    """
+    # Internal SQL class methods
+    """
 
     def __init__(self):
 
@@ -41,35 +45,38 @@ class SQL:
                     self.conn.executescript(sql)
 
     def __check_user_exists(self, UserObj):
-        
+
         '''
         Check if user already exists
         if not then create one
         '''
 
-        sql = ("SELECT COUNT(*) "
-               "FROM 'users' " 
-               "WHERE 'telegram_id' = ?")
+        # check existing user if exists
+        userid = self.select_where("id", "users", "telegram_id", UserObj.id)
 
-        cur = self.conn.cursor()
-        data = cur.execute(sql, (UserObj.id,)).fetchall()
-
-        if data[0][0] == 0:
+        if not userid:
 
             sql = ("INSERT INTO "
-                   "'users' ('telegram_id', 'telegram_name', 'insert_time', 'web_id') "
+                   "users ('telegram_id', 'telegram_name', 'insert_time', 'web_id') "
                    "values (?, ?, ?, ?)")
 
             cur = self.conn.cursor()
-            cur.execute(sql, (UserObj.id, UserObj.first_name, time.time(), '[]'))
+
+            cur.execute(sql, (UserObj.id, UserObj.first_name,
+                              time.time(), json.dumps([])))
+
             self.conn.commit()
 
-    def get_data_table_where(self, getcol, table, colcomp, colval):
+    """
+    # Helper functions is down here
+    """
+
+    def select_where(self, getcol, table, colcomp, colval):
 
         sql = ("SELECT %s "
-               "FROM '%s' "
-               "WHERE '%s' = '%s'") % (getcol, table, colcomp, colval)
-        
+               "FROM %s "
+               "WHERE %s = '%s'") % (getcol, table, colcomp, colval)
+
         cur = self.conn.cursor()
         data = cur.execute(sql).fetchall()
         self.conn.commit()
@@ -78,14 +85,17 @@ class SQL:
 
     def update_where(self, table, setcol, setval, colcomp, colval):
 
-        sql = ("UPDATE '%s' "
-               "SET '%s' = '%s' "
+        sql = ("UPDATE %s "
+               "SET %s = '%s' "
                "WHERE %s = '%s'") % (table, setcol, setval, colcomp, colval)
 
         cur = self.conn.cursor()
         cur.execute(sql)
         self.conn.commit()
 
+    """
+    # Class main methods to be called from users
+    """
 
     def add_website(self, domain_name, UserObj):
 
@@ -97,13 +107,15 @@ class SQL:
         # check either user already exists
         self.__check_user_exists(UserObj)
 
-        # apply to user
-        curr_user_webid = self.get_data_table_where('web_id', 'users',
+        # get current webid for this user
+        curr_user_webid = self.select_where('web_id', 'users',
                                                     'telegram_id', UserObj.id)
+        # decode the json content
+        curr_user_webid = json.loads(curr_user_webid[0][0])
 
         # check if this web already exists in DB
-        webid = self.get_data_table_where('id', 'websites',
-                                          'domain_name', domain_name)
+        webid = self.select_where('id', 'websites',
+                                  'domain_name', domain_name)
 
         if not webid:
 
@@ -116,12 +128,21 @@ class SQL:
 
             # lastup = insert_time (for the first time)
             data = (domain_name, lastup, insert_time)
-
+  
             cur = self.conn.cursor()
             webid = cur.execute(sql, data).lastrowid
             self.conn.commit()  # commit the changes
 
-        curr_user_webid.append(webid)
+        else:
+            # just take from existing website inside DB
+            webid = webid[0][0]
+        
+        # if user currently don't have this website in his list
+        # then add it on requests
+        if webid not in curr_user_webid:
 
-        self.update_where('users', 'web_id', json.dumps(curr_user_webid),
-                          'telegram_id', UserObj.id)
+            curr_user_webid.append(webid)
+            self.update_where('users', 'web_id', json.dumps(curr_user_webid),
+                              'telegram_id', UserObj.id)
+        else:
+            raise TelegramBotException("You already added this website onto your list!")

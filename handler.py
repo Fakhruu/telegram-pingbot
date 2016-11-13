@@ -4,6 +4,7 @@ import dbcon
 datafakap = ()
 
 def start(bot, update):
+    # dbcon.SQL().add_website("google.com", update.message.from_user)
     update.message.reply_text('Hello World!')
 
 def menu(bot, update):
