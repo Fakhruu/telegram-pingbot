@@ -6,9 +6,14 @@ class Handler:
 
     def __init__(self, tokenKey):
 
-        # loop throuagh each handler in handler.py
+        """
+        # register the bot token with pytelegram
+        """
         self.bot = telebot.TeleBot(tokenKey)
 
+        """
+        # Register modules for the use of telegram bot
+        """
         @self.bot.message_handler(commands=['start'])
         def send_welcome(message):
             self.bot.reply_to(message, "Hello! Welcome to PingBot!")
@@ -35,8 +40,9 @@ class Handler:
             else:
                 self.bot.send_message(message.chat.id, "I don't understand " + message.text+ "please click /menu")
 
-
-
+        """
+        # poll the bot for user requests
+        """
         self.bot.polling()
 
     def addweb(self, message):
