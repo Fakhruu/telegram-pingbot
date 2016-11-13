@@ -2,3 +2,4 @@ data.db
 *.swp
 __pycache__
 /.idea/*
+*.pyc
