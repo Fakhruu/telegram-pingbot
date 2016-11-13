@@ -1,6 +1,7 @@
 import sqlite3
 import config
 import os
+import json
 import time
 import exception  # custom exception
 
@@ -17,13 +18,12 @@ class SQL:
         self.check_dbfile = os.path.isfile(self.dbfile)
 
         self.conn = sqlite3.connect(self.dbfile)
-        self._is_db_exists()  # in case db file isn't exists
+        self.__is_dbfile_exists()  # in case db file isn't exists
 
-    def _is_db_exists(self):
+    def __is_dbfile_exists(self):
 
         '''
         Check if db blob exists
-
         if not exists, then create one
         '''
 
@@ -40,22 +40,52 @@ class SQL:
                     sql = f.read()
                     self.conn.executescript(sql)
 
-    def _check_user_exists(self, UserObj):
+    def __check_user_exists(self, UserObj):
         
         '''
         Check if user already exists
         if not then create one
         '''
-        import pdb; pdb.set_trace();
 
         sql = ("SELECT COUNT(*) "
-               "FROM 'users' "
+               "FROM 'users' " 
                "WHERE 'telegram_id' = ?")
+
+        cur = self.conn.cursor()
+        data = cur.execute(sql, (UserObj.id,)).fetchall()
+
+        if data[0][0] == 0:
+
+            sql = ("INSERT INTO "
+                   "'users' ('telegram_id', 'telegram_name', 'insert_time', 'web_id') "
+                   "values (?, ?, ?, ?)")
+
+            cur = self.conn.cursor()
+            cur.execute(sql, (UserObj.id, UserObj.first_name, time.time(), '[]'))
+            self.conn.commit()
+
+    def get_data_table_where(self, getcol, table, colcomp, colval):
+
+        sql = ("SELECT %s "
+               "FROM '%s' "
+               "WHERE '%s' = '%s'") % (getcol, table, colcomp, colval)
         
         cur = self.conn.cursor()
-        cur.execute(sql, (UserObj.id,))
-
+        data = cur.execute(sql).fetchall()
         self.conn.commit()
+
+        return data
+
+    def update_where(self, table, setcol, setval, colcomp, colval):
+
+        sql = ("UPDATE '%s' "
+               "SET '%s' = '%s' "
+               "WHERE %s = '%s'") % (table, setcol, setval, colcomp, colval)
+
+        cur = self.conn.cursor()
+        cur.execute(sql)
+        self.conn.commit()
+
 
     def add_website(self, domain_name, UserObj):
 
@@ -63,22 +93,35 @@ class SQL:
         domain_name: message.text
         UserObj: message.from_user
         '''
-        
+
         # check either user already exists
-        self._check_user_exists(UserObj)
+        self.__check_user_exists(UserObj)
 
-        insert_time = time.time()
-        lastup = insert_time
+        # apply to user
+        curr_user_webid = self.get_data_table_where('web_id', 'users',
+                                                    'telegram_id', UserObj.id)
 
-        sql = ("INSERT INTO "
-               "'websites' ('domain_name', 'lastup', 'is_down', 'insert_time') "
-               "values (?, ?, 0, ?)")
+        # check if this web already exists in DB
+        webid = self.get_data_table_where('id', 'websites',
+                                          'domain_name', domain_name)
 
-        # lastup = insert_time (for the first time)
-        data = (domain_name, lastup, insert_time)
+        if not webid:
 
-        cur = self.conn.cursor()
-        cur.execute(sql, data)
+            insert_time = time.time()
+            lastup = insert_time
 
-        # commit the changes
-        self.conn.commit()
+            sql = ("INSERT INTO "
+                   "'websites' ('domain_name', 'lastup', 'is_down', 'insert_time') "
+                   "values (?, ?, 0, ?)")
+
+            # lastup = insert_time (for the first time)
+            data = (domain_name, lastup, insert_time)
+
+            cur = self.conn.cursor()
+            webid = cur.execute(sql, data).lastrowid
+            self.conn.commit()  # commit the changes
+
+        curr_user_webid.append(webid)
+
+        self.update_where('users', 'web_id', json.dumps(curr_user_webid),
+                          'telegram_id', UserObj.id)
