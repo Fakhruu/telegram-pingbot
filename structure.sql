@@ -10,7 +10,7 @@ CREATE TABLE "users" (
 	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`telegram_id`	INTEGER UNIQUE,
 	`telegram_name`	TEXT,
-	`web_id`	INTEGER,
+	`web_id`	TEXT,
 	`insert_time`	INTEGER
 );
 CREATE TABLE "history" (
