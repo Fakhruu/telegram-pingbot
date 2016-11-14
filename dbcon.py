@@ -8,9 +8,9 @@ from exception import TelegramBotException  # custom exception
 
 class SQL:
 
-    """
+    #############################
     # Internal SQL class methods
-    """
+    #############################
 
     def __init__(self):
 
@@ -44,58 +44,59 @@ class SQL:
                     sql = f.read()
                     self.conn.executescript(sql)
 
-    def __check_user_exists(self, UserObj):
 
-        '''
-        Check if user already exists
-        if not then create one
-        '''
-
-        # check existing user if exists
-        userid = self.select_where("id", "users", "telegram_id", UserObj.id)
-
-        if not userid:
-
-            sql = ("INSERT INTO "
-                   "users ('telegram_id', 'telegram_name', 'insert_time', 'web_id') "
-                   "values (?, ?, ?, ?)")
-
-            cur = self.conn.cursor()
-
-            cur.execute(sql, (UserObj.id, UserObj.first_name,
-                              time.time(), json.dumps([])))
-
-            self.conn.commit()
-
-    """
-    # Helper functions is down here
-    """
+    ##################################
+    # Helper functions is below here
+    ##################################
 
     def select_where(self, getcol, table, colcomp, colval):
 
-        sql = ("SELECT %s "
-               "FROM %s "
-               "WHERE %s = '%s'") % (getcol, table, colcomp, colval)
+        sql = ("""
+               SELECT %s
+               FROM %s
+               WHERE %s = ?
+               """) % (getcol, table, colcomp)
 
         cur = self.conn.cursor()
-        data = cur.execute(sql).fetchall()
+        data = cur.execute(sql, (colval,)).fetchall()
         self.conn.commit()
 
         return data
 
     def update_where(self, table, setcol, setval, colcomp, colval):
 
-        sql = ("UPDATE %s "
-               "SET %s = '%s' "
-               "WHERE %s = '%s'") % (table, setcol, setval, colcomp, colval)
+        sql = ("""
+               UPDATE %s
+               SET %s = ?
+               WHERE %s = ?
+               """) % (table, setcol, colcomp)
 
         cur = self.conn.cursor()
-        cur.execute(sql)
+        cur.execute(sql, (setval, colval, ))
         self.conn.commit()
 
-    """
-    # Class main methods to be called from users
-    """
+    #############################################
+    # Class main methods to be called from callers
+    #############################################
+
+    def add_user(self, UserObj):
+
+        # check existing user if exists
+        userid = self.select_where("telegram_id", "users", "telegram_id", UserObj.id)
+
+        # if not already exists
+        # then add new one
+        if not userid:
+
+            sql = ("""
+                   INSERT INTO
+                   users ('telegram_id', 'telegram_name', 'insert_time')
+                   values (?, ?, ?)
+                   """)
+
+            cur = self.conn.cursor()
+            cur.execute(sql, (UserObj.id, UserObj.first_name, time.time(), ))
+            self.conn.commit()
 
     def add_website(self, domain_name, UserObj):
 
@@ -104,31 +105,28 @@ class SQL:
         UserObj: message.from_user
         '''
 
-        # check either user already exists
-        self.__check_user_exists(UserObj)
+        # add user info to `users` table
+        self.add_user(UserObj)
 
-        # get current webid for this user
-        curr_user_webid = self.select_where('web_id', 'users',
-                                                    'telegram_id', UserObj.id)
-        # decode the json content
-        curr_user_webid = json.loads(curr_user_webid[0][0])
-
-        # check if this web already exists in DB
+        # get id if exists
         webid = self.select_where('id', 'websites',
                                   'domain_name', domain_name)
 
+        # check if this web already exists in DB
         if not webid:
 
             insert_time = time.time()
             lastup = insert_time
 
-            sql = ("INSERT INTO "
-                   "'websites' ('domain_name', 'lastup', 'is_down', 'insert_time') "
-                   "values (?, ?, 0, ?)")
+            sql = ("""
+                   INSERT INTO
+                   'websites' ('domain_name', 'lastup', 'is_down', 'insert_time')
+                   values (?, ?, 0, ?)
+                   """)
 
             # lastup = insert_time (for the first time)
             data = (domain_name, lastup, insert_time)
-  
+
             cur = self.conn.cursor()
             webid = cur.execute(sql, data).lastrowid
             self.conn.commit()  # commit the changes
@@ -136,13 +134,23 @@ class SQL:
         else:
             # just take from existing website inside DB
             webid = webid[0][0]
-        
+
+        registered_status = self.select_where('id', 'users_websites',
+                                              UserObj.id, webid)
+
         # if user currently don't have this website in his list
         # then add it on requests
-        if webid not in curr_user_webid:
+        if not registered_status:
 
-            curr_user_webid.append(webid)
-            self.update_where('users', 'web_id', json.dumps(curr_user_webid),
-                              'telegram_id', UserObj.id)
+            sql = ("""
+                   INSERT INTO
+                   'users_websites' ('websites_id', 'telegram_id', 'insert_time')
+                   values (?, ?, ?)
+                   """)
+
+            cur = self.conn.cursor()
+            cur.execute(sql, (webid, UserObj.id, time.time(), ))
+            self.conn.commit()
+
         else:
             raise TelegramBotException("You already added this website onto your list!")

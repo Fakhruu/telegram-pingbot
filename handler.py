@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-
+import dbcon
 
 class Handler:
 
@@ -52,6 +52,10 @@ class Handler:
 
     def weburl(self, message):
         url = message.text
+        
+        # example add website into db
+        dbcon.SQL().add_website(url, message.from_user)
+
         self.bot.send_message(message.chat.id, "Your URL: " + url)
 
     def editweb(self, message):

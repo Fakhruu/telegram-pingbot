@@ -7,11 +7,15 @@ CREATE TABLE "websites" (
 	`insert_time`	INTEGER
 );
 CREATE TABLE "users" (
-	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`telegram_id`	INTEGER UNIQUE,
+	`telegram_id`    INTEGER PRIMARY KEY UNIQUE,
 	`telegram_name`	TEXT,
-	`web_id`	TEXT,
 	`insert_time`	INTEGER
+);
+CREATE TABLE "users_websites" (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+    `websites_id`   INTEGER,
+    `telegram_id`   INTEGER,
+    `insert_time` INTEGER
 );
 CREATE TABLE "history" (
 	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -21,13 +25,13 @@ CREATE TABLE "history" (
 );
 CREATE TABLE "commands" (
 	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-	`user_id`	INTEGER,
+	`users_id`	INTEGER,
 	`commands`	TEXT,
 	`insert_time`	INTEGER
 );
 CREATE TABLE `admin` (
 	`id`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
 	`name`	TEXT,
-	`telegram_id`	INTEGER
+	`users_id`	INTEGER
 );
 COMMIT;
